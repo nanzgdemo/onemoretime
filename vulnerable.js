@@ -1,6 +1,7 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const escape = require('escape-html');
+const RateLimit = require('express-rate-limit');
 
 const app = express();
 const bodyParser = require('body-parser');
@@ -13,12 +14,18 @@ db.serialize(() => {
     db.run("INSERT INTO users (username, password) VALUES ('admin', 'securepassword')");
 });
 
+// Set up rate limiter: maximum of 100 requests per 15 minutes
+const limiter = RateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // max 100 requests per windowMs
+});
+
 /**
  * 🚨 Vulnerability 1: SQL Injection
  * - Directly concatenates user input into an SQL query.
  * - Attackers can manipulate queries to bypass authentication or exfiltrate data.
  */
-app.post('/login', (req, res) => {
+app.post('/login', limiter, (req, res) => {
     const { username, password } = req.body;
 
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`; // ⚠️ UNSAFE: SQL Injection risk

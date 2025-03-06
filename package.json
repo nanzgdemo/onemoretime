@@ -4,7 +4,8 @@
   "dependencies": {
     "express": "4.15.0",  
     "lodash": "4.17.20",
-    "escape-html": "^1.0.3"
+    "escape-html": "^1.0.3",
+    "express-rate-limit": "^7.5.0"
   },
   "main": "index.js",
   "scripts": {
