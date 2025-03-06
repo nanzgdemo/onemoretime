@@ -1,55 +1,43 @@
 const express = require('express');
-const fs = require('fs');
-const { exec } = require('child_process');
+const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 const bodyParser = require('body-parser');
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// 🚨 Initialize an in-memory SQLite database
+const db = new sqlite3.Database(':memory:');
+db.serialize(() => {
+    db.run("CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password TEXT)");
+    db.run("INSERT INTO users (username, password) VALUES ('admin', 'securepassword')");
+});
 
 /**
- * 🚨 Vulnerability 1: Command Injection
- * - Uses `exec()` to run shell commands with user input.
- * - Attackers can execute arbitrary system commands.
+ * 🚨 Vulnerability 1: SQL Injection
+ * - Directly concatenates user input into an SQL query.
+ * - Attackers can manipulate queries to bypass authentication or exfiltrate data.
  */
-app.get('/ping', (req, res) => {
-    const ip = req.query.ip;
-    exec(`ping -c 3 ${ip}`, (error, stdout, stderr) => {
-        if (error) {
-            res.status(500).send(`Error: ${stderr}`);
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+
+    const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`; // ⚠️ UNSAFE: SQL Injection risk
+    db.get(query, (err, row) => {
+        if (row) {
+            res.send(`Welcome, ${row.username}!`);
         } else {
-            res.send(stdout);
+            res.status(401).send("Invalid credentials");
         }
     });
 });
 
 /**
- * 🚨 Vulnerability 2: Local File Inclusion (LFI)
- * - Uses `fs.readFileSync()` with user input.
- * - Attackers can read arbitrary files (e.g., `/etc/passwd`).
+ * 🚨 Vulnerability 2: Cross-Site Scripting (XSS)
+ * - Directly renders user input in an HTML response without sanitization.
+ * - Attackers can inject malicious scripts that execute in the user's browser.
  */
-app.get('/readfile', (req, res) => {
-    const filename = req.query.filename;
-    try {
-        const data = fs.readFileSync(filename, 'utf8'); // ⚠️ UNSAFE: No input validation
-        res.send(data);
-    } catch (error) {
-        res.status(500).send('Error reading file');
-    }
-});
-
-/**
- * 🚨 Vulnerability 3: Insecure Deserialization
- * - Uses `JSON.parse()` directly on user input.
- * - Attackers can craft malicious JSON input leading to unexpected behavior.
- */
-app.post('/deserialize', (req, res) => {
-    try {
-        const userInput = req.body.data;
-        const parsedData = JSON.parse(userInput); // ⚠️ UNSAFE: No validation or sanitization
-        res.json({ message: "Data processed", data: parsedData });
-    } catch (error) {
-        res.status(400).send('Invalid JSON format');
-    }
+app.get('/greet', (req, res) => {
+    const name = req.query.name;
+    res.send(`<h1>Hello, ${name}!</h1>`); // ⚠️ UNSAFE: User input directly injected into HTML
 });
 
 // Start the server
