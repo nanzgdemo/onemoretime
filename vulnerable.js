@@ -1,5 +1,6 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
+const escape = require('escape-html');
 
 const app = express();
 const bodyParser = require('body-parser');
@@ -37,7 +38,7 @@ app.post('/login', (req, res) => {
  */
 app.get('/greet', (req, res) => {
     const name = req.query.name;
-    res.send(`<h1>Hello, ${name}!</h1>`); // ⚠️ UNSAFE: User input directly injected into HTML
+    res.send(`<h1>Hello, ${escape(name)}!</h1>`); // SAFE: User input sanitized before injecting into HTML
 });
 
 // Start the server
