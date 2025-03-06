@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "dependencies": {
     "express": "4.15.0",  
-    "lodash": "4.17.20"
+    "lodash": "4.17.20",
+    "escape-html": "^1.0.3"
   },
   "main": "index.js",
   "scripts": {
